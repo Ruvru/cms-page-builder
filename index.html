@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMS Page Builder - Content Components</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      background: #f1f3f4;
+    }
+    .app { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+    .toolbar {
+      background: #fff; padding: 1rem; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 2rem;
+      display: flex; gap: 1rem; align-items: center;
+    }
+    .btn {
+      padding: 0.5rem 1rem; border: none; border-radius: 6px;
+      cursor: pointer; font-weight: 500; transition: 0.2s;
+    }
+    .btn-primary { background: #4285f4; color: white; }
+    .btn-secondary { background: #fbbc04; color: #000; }
+    .btn-edit { background: #34a853; color: white; }
+    .mode-indicator { font-weight: bold; padding: 0.5rem 1rem; border-radius: 20px; }
+    .edit-mode .mode-indicator { background: #fff3cd; color: #856404; }
+    .preview-mode .mode-indicator { background: #d4edda; color: #155724; }
+
+    /* CMS Page */
+    .cms-page { min-height: 60vh; }
+    .section {
+      margin-bottom: 2rem; padding: 2rem; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative;
+    }
+    .section.hero {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; text-align: center;
+    }
+    .section.text { background: #fff; }
+    .section.featured-products { background: #f8f9fa; }
+    .section:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+
+    /* Edit Mode Controls */
+    .edit-controls {
+      position: absolute; top: 1rem; right: 1rem;
+      display: flex; gap: 0.5rem; opacity: 0; transition: 0.3s;
+    }
+    .section:hover .edit-controls { opacity: 1; }
+    .edit-controls button {
+      padding: 0.3rem 0.6rem; font-size: 0.8rem; background: rgba(255,255,255,0.9);
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+
+    /* Component Library */
+    .component-library {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem; margin: 2rem 0;
+    }
+    .component-item {
+      background: white; padding: 1.5rem; border-radius: 8px;
+      text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: 0.3s;
+    }
+    .component-item:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+
+    /* Product Grid */
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+    .product-card {
+      background: white; padding: 1.5rem; border-radius: 8px;
+      text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .product-price { font-size: 1.4rem; font-weight: bold; color: #34a853; }
+
+    @media (max-width: 768px) {
+      .toolbar { flex-direction: column; gap: 1rem; }
+      .app { padding: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="toolbar">
+      <h1>🧩 CMS Page Builder</h1>
+      <div>
+        <button class="btn btn-edit" onclick="toggleEditMode()">📝 Edit Mode</button>
+        <button class="btn btn-primary" onclick="addComponent('hero')">➕ Hero</button>
+        <button class="btn btn-secondary" onclick="addComponent('text')">📄 Text</button>
+        <button class="btn" onclick="addComponent('products')" style="background:#ea4335;color:white;">🛒 Products</button>
+        <span class="mode-indicator" id="modeIndicator">Preview</span>
+      </div>
+    </div>
+
+    <div class="component-library" id="componentLibrary">
+      <div class="component-item" onclick="addComponent('hero')" title="Hero Section">
+        <h3>🎨 Hero</h3>
+        <p>Large banner/title</p>
+      </div>
+      <div class="component-item" onclick="addComponent('text')" title="Text Section">
+        <h3>📝 Text</h3>
+        <p>Content block</p>
+      </div>
+      <div class="component-item" onclick="addComponent('products')" title="Product Grid">
+        <h3>🛍️ Products</h3>
+        <p>Featured items</p>
+      </div>
+    </div>
+
+    <div class="cms-page" id="pageContainer">
+      <!-- Page sections render here -->
+    </div>
+  </div>
+
+  <script>
+  let editMode = false;
+  let pageSections = [];
+
+  // Sample default page
+  const defaultPage = [
+    {
+      id: 'hero-1',
+      type: 'hero',
+      title: 'Welcome to Our Store',
+      subtitle: 'Discover amazing products with great service'
+    },
+    {
+      id: 'text-1',
+      type: 'text',
+      heading: 'Why Choose Us?',
+      content: 'Premium quality products with fast delivery and excellent customer support.'
+    },
+    {
+      id: 'products-1',
+      type: 'products',
+      title: 'Featured Products',
+      products: [
+        { name: 'Wireless Headphones', price: 89.99 },
+        { name: 'Mechanical Keyboard', price: 129.99 },
+        { name: 'Laptop Stand', price: 39.99 }
+      ]
+    }
+  ];
+
+  function init() {
+    pageSections = [...defaultPage];
+    renderPage();
+    document.body.className = editMode ? 'edit-mode' : 'preview-mode';
+    document.getElementById('modeIndicator').textContent = editMode ? 'Edit Mode' : 'Preview Mode';
+  }
+
+  function toggleEditMode() {
+    editMode = !editMode;
+    document.body.className = editMode ? 'edit-mode' : 'preview-mode';
+    document.getElementById('modeIndicator').textContent = editMode ? 'Edit Mode' : 'Preview Mode';
+    renderPage();
+  }
+
+  function addComponent(type) {
+    if (!editMode) {
+      showAlert('Switch to Edit Mode first!', 'warning');
+      return;
+    }
+
+    const newSection = {
+      id: `${type}-${Date.now()}`,
+      type: type,
+      title: getDefaultTitle(type)
+    };
+
+    if (type === 'products') {
+      newSection.products = [
+        { name: 'Product 1', price: 29.99 },
+        { name: 'Product 2', price: 49.99 }
+      ];
+    } else if (type === 'text') {
+      newSection.heading = 'New Section';
+      newSection.content = 'Enter your content here...';
+    }
+
+    pageSections.push(newSection);
+    renderPage();
+    showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} added!`, 'success');
+  }
+
+  function getDefaultTitle(type) {
+    const titles = {
+      hero: 'New Hero Section',
+      text: 'New Text Block',
+      products: 'Featured Products'
+    };
+    return titles[type] || 'New Section';
+  }
+
+  function renderPage() {
+    const container = document.getElementById('pageContainer');
+    container.innerHTML = pageSections.map(section => createSectionHTML(section)).join('');
+  }
+
+  function createSectionHTML(section) {
+    let html = `<section class="section ${section.type}" data-id="${section.id}">`;
+
+    if (section.type === 'hero') {
+      html += `
+        <h1 contenteditable="${editMode}">${section.title || 'Hero Section'}</h1>
+        <p contenteditable="${editMode}">${section.subtitle || 'Your subtitle here'}</p>
+      `;
+    } else if (section.type === 'text') {
+      html += `
+        <h2 contenteditable="${editMode}">${section.heading || 'Text Section'}</h2>
+        <p contenteditable="${editMode}">${section.content || 'Your content here...'}</p>
+      `;
+    } else if (section.type === 'products') {
+      const productsHTML = (section.products || []).map(p =>
+        `<div class="product-card">
+          <h4>${p.name}</h4>
+          <div class="product-price">$${p.price.toFixed(2)}</div>
+        </div>`
+      ).join('');
+      html += `
+        <h2 contenteditable="${editMode}">${section.title || 'Products'}</h2>
+        <div class="product-grid">${productsHTML}</div>
+      `;
+    }
+
+    // ALWAYS VISIBLE EDIT CONTROLS in Edit Mode
+    if (editMode) {
+      html += `
+        <div class="edit-controls" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.95); padding: 0.5rem; border-radius: 6px;">
+          <button onclick="saveSection('${section.id}')" style="background: #4285f4; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; margin-right: 0.3rem;">💾 Save</button>
+          <button onclick="deleteSection('${section.id}')" style="background: #ea4335; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer;">🗑️ Delete</button>
+        </div>
+      `;
+    }
+
+    html += '</section>';
+    return html;
+  }
+
+  window.saveSection = (sectionId) => {
+    const sectionEl = document.querySelector(`[data-id="${sectionId}"]`);
+    if (sectionEl) {
+      const section = pageSections.find(s => s.id === sectionId);
+      if (section) {
+        // Save edited content
+        if (section.type === 'hero') {
+          section.title = sectionEl.querySelector('h1').textContent;
+          section.subtitle = sectionEl.querySelector('p').textContent;
+        } else if (section.type === 'text') {
+          section.heading = sectionEl.querySelector('h2').textContent;
+          section.content = sectionEl.querySelector('p').textContent;
+        } else if (section.type === 'products') {
+          section.title = sectionEl.querySelector('h2').textContent;
+        }
+        showAlert('Section saved!', 'success');
+      }
+    }
+  };
+
+  window.deleteSection = (sectionId) => {
+    if (confirm('Delete this section?')) {
+      pageSections = pageSections.filter(s => s.id !== sectionId);
+      renderPage();
+      showAlert('Section deleted!', 'success');
+    }
+  };
+
+  function showAlert(message, type = 'success') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; padding: 1rem 1.5rem; background: #d4edda; color: #155724; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    alert.textContent = message;
+    document.body.appendChild(alert);
+    setTimeout(() => {
+      if (alert.parentNode) alert.remove();
+    }, 3000);
+  }
+
+  // Initialize
+  init();
+</script>
+
+</body>
+</html>
